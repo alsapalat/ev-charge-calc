@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#ffffff">
+<title>EV Charge</title>
+<style>
+  :root{
+    --bg:#f5f7fa;
+    --surface:#ffffff;
+    --surface-2:#f1f4f8;
+    --text:#0f172a;
+    --muted:#7c8898;
+    --line:#e8ecf1;
+    --accent:#10b981;
+    --accent-press:#0e9f73;
+    --accent-soft:#e9faf3;
+    --shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px rgba(16,24,40,.06);
+    --shadow-lg:0 -8px 40px rgba(16,24,40,.16);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  body{max-width:480px;margin:0 auto;min-height:100vh;padding:20px 18px calc(40px + env(safe-area-inset-bottom));}
+  h1,h2,h3,p{margin:0;}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;}
+
+  /* Header */
+  .app-head{display:flex;align-items:center;gap:11px;margin-bottom:18px;}
+  .mark{width:40px;height:40px;border-radius:12px;background:var(--accent);
+    display:flex;align-items:center;justify-content:center;font-size:21px;
+    box-shadow:0 6px 16px rgba(16,185,129,.32);}
+  .app-head h1{font-size:18px;font-weight:700;letter-spacing:-.01em;}
+  .app-head p{font-size:12.5px;color:var(--muted);margin-top:1px;}
+
+  /* Station dropdown pill */
+  .picker{position:relative;margin-bottom:18px;z-index:30;}
+  .station-pill{width:100%;display:flex;align-items:center;gap:13px;background:var(--surface);
+    border:1px solid var(--line);border-radius:16px;padding:13px 15px;box-shadow:var(--shadow);
+    text-align:left;transition:transform .12s;}
+  .station-pill:active{transform:scale(.99);}
+  .station-pill .chev{transition:transform .2s;}
+  .station-pill.open .chev{transform:rotate(180deg);}
+
+  /* Dropdown */
+  .dd-scrim{position:fixed;inset:0;z-index:20;display:none;}
+  .dd-scrim.show{display:block;}
+  .dropdown{position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:31;background:var(--surface);
+    border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:6px;
+    opacity:0;visibility:hidden;transform:translateY(-6px);transition:opacity .18s,transform .18s;
+    max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .dropdown.open{opacity:1;visibility:visible;transform:translateY(0);}
+  .dd-row{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:12px;transition:background .12s;}
+  .dd-row:active{background:var(--surface-2);}
+  .dd-row.active{background:var(--accent-soft);}
+  .dd-row .pick{flex:1;display:flex;align-items:center;gap:11px;min-width:0;}
+  .dd-row .ic{width:32px;height:32px;flex:0 0 auto;border-radius:9px;background:var(--surface-2);
+    color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:15px;}
+  .dd-row.active .ic{background:#fff;}
+  .dd-row .info{min-width:0;}
+  .dd-row .nm{font-size:14.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .dd-row .mt{font-size:11.5px;color:var(--muted);margin-top:1px;}
+  .dd-row .del{width:34px;height:34px;flex:0 0 auto;border-radius:9px;color:#c4ccd6;font-size:15px;
+    display:flex;align-items:center;justify-content:center;}
+  .dd-row .del:active{color:#ef4444;background:#fef2f2;}
+  .dd-sep{height:1px;background:var(--line);margin:6px 8px;}
+  .dd-add{width:100%;display:flex;align-items:center;gap:11px;padding:11px 10px;border-radius:12px;
+    color:var(--accent-press);font-size:14.5px;font-weight:650;text-align:left;}
+  .dd-add:active{background:var(--accent-soft);}
+  .dd-add .plus{width:32px;height:32px;flex:0 0 auto;border-radius:9px;background:var(--accent-soft);
+    color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:19px;}
+  .dd-empty{font-size:13px;color:var(--muted);text-align:center;padding:12px 10px;}
+  .station-pill .ic{width:38px;height:38px;flex:0 0 auto;border-radius:11px;background:var(--accent-soft);
+    color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .station-pill .body{flex:1;min-width:0;}
+  .station-pill .nm{font-size:15px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .station-pill .mt{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .station-pill .chev{color:var(--muted);font-size:13px;flex:0 0 auto;}
+
+  /* Estimate hero */
+  .hero{background:var(--surface);border:1px solid var(--line);border-radius:22px;
+    padding:6px;box-shadow:var(--shadow);}
+  .seg{display:flex;background:var(--surface-2);border-radius:16px;padding:4px;gap:4px;}
+  .seg button{flex:1;padding:11px 6px;border-radius:13px;font-size:13.5px;font-weight:600;
+    color:var(--muted);transition:all .15s;letter-spacing:-.01em;}
+  .seg button.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(16,24,40,.1);}
+
+  .pane{display:none;padding:20px 16px 16px;}
+  .pane.active{display:block;animation:fade .22s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+
+  .ask{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:12px;text-align:center;}
+
+  /* Big input(s) */
+  .duo{display:flex;align-items:flex-end;justify-content:center;gap:6px;margin-bottom:6px;}
+  .bigfield{display:flex;flex-direction:column;align-items:center;}
+  .bigfield input{width:96px;text-align:center;font-size:40px;font-weight:750;letter-spacing:-.02em;
+    border:none;background:none;color:var(--text);outline:none;padding:0;}
+  .bigfield .u{font-size:12px;color:var(--muted);font-weight:600;margin-top:2px;text-transform:uppercase;letter-spacing:.04em;}
+  .duo .sep{font-size:34px;font-weight:600;color:var(--line);padding-bottom:18px;}
+  .moneyfield{display:flex;align-items:center;justify-content:center;gap:2px;}
+  .moneyfield .sign{font-size:34px;font-weight:700;color:var(--muted);}
+  .moneyfield input{width:auto;min-width:60px;max-width:200px;}
+
+  /* Result */
+  .result{margin-top:18px;background:var(--accent-soft);border-radius:16px;padding:18px 16px;text-align:center;}
+  .result .big{font-size:34px;font-weight:800;color:var(--accent-press);letter-spacing:-.02em;line-height:1.05;}
+  .result .sub{font-size:13px;color:#3f7a64;margin-top:8px;line-height:1.5;}
+  .result.idle{background:var(--surface-2);}
+  .result.idle .big{color:var(--muted);font-size:17px;font-weight:600;}
+  .result.idle .sub{color:var(--muted);}
+
+  footer{text-align:center;color:#9aa6b4;font-size:11px;margin-top:22px;line-height:1.6;}
+
+  /* Scrim + Drawer */
+  .scrim{position:fixed;inset:0;background:rgba(15,23,42,.42);opacity:0;visibility:hidden;
+    transition:opacity .25s;z-index:40;backdrop-filter:blur(2px);}
+  .scrim.show{opacity:1;visibility:visible;}
+  .drawer{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--surface);
+    border-radius:24px 24px 0 0;box-shadow:var(--shadow-lg);max-width:480px;margin:0 auto;
+    transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);
+    max-height:88vh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);}
+  .drawer.open{transform:translateY(0);}
+  .grab{width:38px;height:5px;border-radius:3px;background:#dfe4ea;margin:10px auto 4px;flex:0 0 auto;}
+  .drawer-head{display:flex;align-items:center;justify-content:space-between;padding:8px 20px 12px;flex:0 0 auto;}
+  .drawer-head h2{font-size:17px;font-weight:700;}
+  .drawer-head .close{width:32px;height:32px;border-radius:50%;background:var(--surface-2);
+    color:var(--muted);font-size:17px;display:flex;align-items:center;justify-content:center;}
+  .drawer-body{overflow-y:auto;padding:0 20px 22px;-webkit-overflow-scrolling:touch;}
+
+  .sect-label{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--muted);margin:14px 2px 9px;}
+
+  /* Station list rows */
+  .st-row{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;
+    border:1px solid var(--line);margin-bottom:8px;transition:background .12s;}
+  .st-row.active{border-color:var(--accent);background:var(--accent-soft);}
+  .st-row .ic{width:34px;height:34px;flex:0 0 auto;border-radius:10px;background:var(--surface-2);
+    color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .st-row.active .ic{background:#fff;}
+  .st-row .info{flex:1;min-width:0;}
+  .st-row .info .nm{font-size:14.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .st-row .info .mt{font-size:11.5px;color:var(--muted);margin-top:1px;}
+  .st-row .pick{flex:1;display:flex;align-items:center;gap:12px;min-width:0;}
+  .st-row .del{width:32px;height:32px;flex:0 0 auto;border-radius:9px;color:#c4ccd6;font-size:16px;
+    display:flex;align-items:center;justify-content:center;}
+  .st-row .del:active{color:#ef4444;background:#fef2f2;}
+  .empty{font-size:13px;color:var(--muted);text-align:center;padding:14px;background:var(--surface-2);border-radius:14px;}
+
+  /* Detail form */
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:6px;}
+  .field input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    color:var(--text);font-size:16px;padding:13px 13px;outline:none;transition:border .15s;}
+  .field input:focus{border-color:var(--accent);}
+  .grid2{display:flex;gap:10px;}
+  .grid2 .field{flex:1;}
+  .mini-stats{display:flex;gap:8px;margin:4px 0 14px;}
+  .mini-stats .s{flex:1;background:var(--surface-2);border-radius:12px;padding:10px;text-align:center;}
+  .mini-stats .s .v{font-size:16px;font-weight:750;color:var(--accent-press);}
+  .mini-stats .s .l{font-size:10.5px;color:var(--muted);margin-top:2px;}
+  .save-row{display:flex;gap:10px;}
+  .save-row input{flex:1;}
+  .btn-primary{background:var(--accent);color:#fff;border-radius:12px;padding:0 20px;font-size:15px;
+    font-weight:650;flex:0 0 auto;}
+  .btn-primary:active{background:var(--accent-press);}
+  .btn-primary:disabled{opacity:.45;}
+  .note{color:#e0982f;font-size:11.5px;margin-top:8px;display:none;}
+</style>
+</head>
+<body>
+
+<div class="app-head">
+  <div class="mark">⚡</div>
+  <div>
+    <h1>EV Charge</h1>
+    <p>Estimate from your charging stations</p>
+  </div>
+</div>
+
+<!-- Station dropdown -->
+<div class="picker">
+  <button class="station-pill" id="pill" type="button">
+    <div class="ic">⛽</div>
+    <div class="body">
+      <div class="nm" id="pill-name">No station</div>
+      <div class="mt" id="pill-meta">Tap to choose a station</div>
+    </div>
+    <div class="chev">▾</div>
+  </button>
+  <div class="dropdown" id="dropdown">
+    <div id="st-list"></div>
+    <div class="dd-sep" id="dd-sep"></div>
+    <button class="dd-add" id="dd-add" type="button">
+      <span class="plus">＋</span> Add New
+    </button>
+  </div>
+</div>
+<div class="dd-scrim" id="dd-scrim"></div>
+
+<!-- Estimate hero -->
+<div class="hero">
+  <div class="seg">
+    <button class="active" data-pane="time" type="button">How much by time</button>
+    <button data-pane="money" type="button">How long by cost</button>
+  </div>
+
+  <!-- time -> energy + cost -->
+  <div class="pane active" id="pane-time">
+    <div class="ask">How long will you charge?</div>
+    <div class="duo">
+      <div class="bigfield">
+        <input type="number" id="t-hours" inputmode="numeric" value="3" min="0" step="1">
+        <span class="u">hours</span>
+      </div>
+      <span class="sep">:</span>
+      <div class="bigfield">
+        <input type="number" id="t-mins" inputmode="numeric" value="0" min="0" max="59" step="5">
+        <span class="u">min</span>
+      </div>
+    </div>
+    <div class="result" id="res-time">
+      <div class="big" id="t-out">—</div>
+      <div class="sub" id="t-sub">Set up a station first.</div>
+    </div>
+  </div>
+
+  <!-- money -> time -->
+  <div class="pane" id="pane-money">
+    <div class="ask">What's your budget?</div>
+    <div class="moneyfield">
+      <span class="sign">₱</span>
+      <div class="bigfield">
+        <input type="number" id="m-amount" inputmode="decimal" value="200" min="0" step="10">
+      </div>
+    </div>
+    <div class="result" id="res-money">
+      <div class="big" id="m-out">—</div>
+      <div class="sub" id="m-sub">Set up a station first.</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Estimates assume a constant charge rate from each station's reference session.<br>
+  Saved on this device only · works offline.
+</footer>
+
+<!-- Drawer -->
+<div class="scrim" id="scrim"></div>
+<div class="drawer" id="drawer">
+  <div class="grab"></div>
+  <div class="drawer-head">
+    <h2 id="drawer-title">New charging station</h2>
+    <button class="close" id="drawer-close" type="button">✕</button>
+  </div>
+  <div class="drawer-body">
+
+    <div class="grid2">
+      <div class="field">
+        <label for="start">Start time</label>
+        <input type="time" id="start" value="22:00">
+      </div>
+      <div class="field">
+        <label for="end">End time</label>
+        <input type="time" id="end" value="06:00">
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label for="energy">Energy (kWh)</label>
+        <input type="number" id="energy" inputmode="decimal" value="40" min="0" step="0.1">
+      </div>
+      <div class="field">
+        <label for="price">Price / kWh (₱)</label>
+        <input type="number" id="price" inputmode="decimal" value="12.00" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="note" id="dur-note">⚠ End time equals start time — enter a valid session.</div>
+
+    <div class="mini-stats">
+      <div class="s"><div class="v" id="m-dur">—</div><div class="l">Duration</div></div>
+      <div class="s"><div class="v" id="m-rate">—</div><div class="l">Charge rate</div></div>
+      <div class="s"><div class="v" id="m-cph">—</div><div class="l">Cost / hr</div></div>
+    </div>
+
+    <div class="save-row">
+      <div class="field" style="margin:0;flex:1;">
+        <input type="text" id="st-name" placeholder="Station name e.g. Home Garage" maxlength="28">
+      </div>
+      <button class="btn-primary" id="st-save" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  function num(v){ var n=parseFloat(v); return isFinite(n)?n:0; }
+  function money(n){ return '₱'+n.toFixed(2); }
+
+  var f = { start:$('start'), end:$('end'), energy:$('energy'), price:$('price') };
+
+  /* ---- helpers ---- */
+  function durationOf(s,e){
+    if(!s||!e) return 0;
+    var sp=s.split(':'), ep=e.split(':');
+    var sm=(+sp[0])*60+(+sp[1]), em=(+ep[0])*60+(+ep[1]);
+    var diff=em-sm; if(diff<=0) diff+=24*60; return diff/60;
+  }
+  function fmtHM(hours){
+    if(!isFinite(hours)||hours<=0) return '—';
+    var t=Math.round(hours*60), h=Math.floor(t/60), m=t%60;
+    if(h&&m) return h+'h '+m+'m';
+    if(h) return h+'h';
+    return m+'m';
+  }
+  function curRate(){ var d=durationOf(f.start.value,f.end.value); return d>0?num(f.energy.value)/d:0; }
+
+  /* ---- storage ---- */
+  var STORE='evcalc.stations.v2', SELKEY='evcalc.selected.v2';
+  var activeName=null;
+  function load(){ try{return JSON.parse(localStorage.getItem(STORE))||[];}catch(e){return [];} }
+  function save(l){ try{localStorage.setItem(STORE,JSON.stringify(l));}catch(e){} }
+  function setSel(n){ activeName=n; try{n?localStorage.setItem(SELKEY,n):localStorage.removeItem(SELKEY);}catch(e){} }
+
+  /* ---- render main estimate + pill ---- */
+  function render(){
+    var rate=curRate(), price=num(f.price.value), dur=durationOf(f.start.value,f.end.value);
+
+    // pill
+    $('pill-name').textContent = activeName || 'Unsaved station';
+    $('pill-meta').textContent = rate>0
+      ? rate.toFixed(1)+' kW · '+money(price)+'/kWh · '+fmtHM(dur)
+      : 'Tap to set up a station';
+
+    // drawer mini stats + note
+    $('dur-note').style.display = (f.start.value&&f.end.value&&dur===0)?'block':'none';
+    $('m-dur').textContent  = dur>0?fmtHM(dur):'—';
+    $('m-rate').textContent = rate>0?rate.toFixed(1)+' kW':'—';
+    $('m-cph').textContent  = rate>0?money(rate*price):'—';
+
+    var ready = rate>0;
+
+    // mode 1
+    var hrs=num($('t-hours').value)+num($('t-mins').value)/60;
+    if(ready&&hrs>0){
+      var en=rate*hrs;
+      $('t-out').textContent=en.toFixed(1)+' kWh';
+      $('t-sub').innerHTML='≈ '+money(en*price)+' &nbsp;·&nbsp; '+rate.toFixed(1)+' kW for '+fmtHM(hrs);
+      $('res-time').classList.remove('idle');
+    } else {
+      $('t-out').textContent='—';
+      $('t-sub').textContent=ready?'Enter a charge duration.':'Set up a station first.';
+      $('res-time').classList.add('idle');
+    }
+
+    // mode 2
+    var budget=num($('m-amount').value);
+    if(ready&&price>0&&budget>0){
+      var e2=budget/price, t2=e2/rate;
+      $('m-out').textContent=fmtHM(t2);
+      $('m-sub').innerHTML='≈ '+e2.toFixed(1)+' kWh &nbsp;·&nbsp; '+money(budget)+' at '+money(price)+'/kWh';
+      $('res-money').classList.remove('idle');
+    } else {
+      $('m-out').textContent='—';
+      $('m-sub').textContent=(ready&&price>0)?'Enter a budget.':'Set up a station first.';
+      $('res-money').classList.add('idle');
+    }
+  }
+
+  /* ---- station list in dropdown ---- */
+  function renderList(){
+    var list=load(), wrap=$('st-list');
+    wrap.innerHTML='';
+    $('dd-sep').style.display = list.length ? 'block' : 'none';
+    if(!list.length){
+      var e=document.createElement('div');
+      e.className='dd-empty'; e.textContent='No stations yet.';
+      wrap.appendChild(e); return;
+    }
+    list.forEach(function(st){
+      var row=document.createElement('div');
+      row.className='dd-row'+(st.name===activeName?' active':'');
+
+      var pick=document.createElement('div'); pick.className='pick';
+      var ic=document.createElement('div'); ic.className='ic'; ic.textContent='⛽';
+      var info=document.createElement('div'); info.className='info';
+      var nm=document.createElement('div'); nm.className='nm'; nm.textContent=st.name;
+      var d=durationOf(st.start,st.end), r=d>0?num(st.energy)/d:0;
+      var mt=document.createElement('div'); mt.className='mt';
+      mt.textContent=(r>0?r.toFixed(1)+' kW':'—')+' · '+money(num(st.price))+'/kWh';
+      info.appendChild(nm); info.appendChild(mt);
+      pick.appendChild(ic); pick.appendChild(info);
+      pick.addEventListener('click', function(){ selectStation(st); closeDropdown(); });
+
+      var del=document.createElement('button'); del.className='del'; del.textContent='🗑'; del.type='button';
+      del.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        if(!window.confirm('Delete station "'+st.name+'"?\nThis can’t be undone.')) return;
+        var next=load().filter(function(s){return s.name!==st.name;});
+        save(next);
+        if(activeName===st.name){ setSel(null); }
+        renderList(); render();
+      });
+
+      row.appendChild(pick); row.appendChild(del);
+      wrap.appendChild(row);
+    });
+  }
+
+  function fillForm(st){
+    f.start.value=st.start; f.end.value=st.end;
+    f.energy.value=st.energy; f.price.value=st.price;
+    $('st-name').value=st.name||'';
+  }
+  function selectStation(st){
+    fillForm(st); setSel(st.name); render(); renderList();
+  }
+
+  /* ---- save ---- */
+  $('st-save').addEventListener('click', function(){
+    var name=$('st-name').value.trim();
+    if(!name){ $('st-name').focus(); return; }
+    var st={name:name,start:f.start.value,end:f.end.value,energy:f.energy.value,price:f.price.value};
+    var list=load().filter(function(s){return s.name!==name;});
+    list.push(st); save(list); setSel(name);
+    render(); renderList();
+    // brief confirm, then close the drawer back to the estimate
+    var b=$('st-save'); var o=b.textContent; b.textContent='Saved ✓';
+    setTimeout(function(){ b.textContent=o; closeDrawer(); },650);
+  });
+
+  // live edits in form
+  Object.keys(f).forEach(function(k){
+    f[k].addEventListener('input', function(){
+      // diverging from saved station unlinks selection highlight
+      if(activeName){ setSel(null); renderList(); }
+      render();
+    });
+  });
+  ['t-hours','t-mins','m-amount'].forEach(function(id){
+    $(id).addEventListener('input', render);
+  });
+
+  /* ---- segmented tabs ---- */
+  var segs=document.querySelectorAll('.seg button');
+  segs.forEach(function(b){
+    b.addEventListener('click', function(){
+      segs.forEach(function(x){x.classList.remove('active');}); b.classList.add('active');
+      document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('active');});
+      $('pane-'+b.dataset.pane).classList.add('active');
+    });
+  });
+
+  /* ---- dropdown ---- */
+  function openDropdown(){ renderList(); $('dropdown').classList.add('open'); $('pill').classList.add('open'); $('dd-scrim').classList.add('show'); }
+  function closeDropdown(){ $('dropdown').classList.remove('open'); $('pill').classList.remove('open'); $('dd-scrim').classList.remove('show'); }
+  $('pill').addEventListener('click', function(){
+    $('dropdown').classList.contains('open') ? closeDropdown() : openDropdown();
+  });
+  $('dd-scrim').addEventListener('click', closeDropdown);
+
+  /* ---- drawer (define / add new) ---- */
+  function openDrawer(){ $('drawer').classList.add('open'); $('scrim').classList.add('show'); }
+  function closeDrawer(){ $('drawer').classList.remove('open'); $('scrim').classList.remove('show'); }
+  $('drawer-close').addEventListener('click', closeDrawer);
+  $('scrim').addEventListener('click', closeDrawer);
+
+  // Add New → blank form
+  function newStation(){
+    setSel(null);
+    f.start.value='22:00'; f.end.value='06:00'; f.energy.value='40'; f.price.value='12.00';
+    $('st-name').value='';
+    render();
+    closeDropdown();
+    openDrawer();
+    setTimeout(function(){ $('st-name').focus(); }, 350);
+  }
+  $('dd-add').addEventListener('click', newStation);
+
+  /* ---- init ---- */
+  (function init(){
+    var list=load(); var sel=null;
+    try{ sel=localStorage.getItem(SELKEY); }catch(e){}
+    var match=sel&&list.filter(function(s){return s.name===sel;})[0];
+    if(match){ activeName=match.name; fillForm(match); }
+    else if(list.length){ activeName=list[0].name; fillForm(list[0]); }
+    render(); renderList();
+    // No stations yet → prompt the user to define one first
+    if(!list.length){ openDrawer(); setTimeout(function(){ $('st-name').focus(); }, 350); }
+  })();
+})();
+</script>
+</body>
+</html>
