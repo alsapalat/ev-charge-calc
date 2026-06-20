@@ -23,7 +23,7 @@
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     -webkit-font-smoothing:antialiased;}
-  body{max-width:480px;margin:0 auto;min-height:100vh;padding:20px 18px calc(40px + env(safe-area-inset-bottom));}
+  body{max-width:480px;margin:0 auto;min-height:100vh;padding:20px 18px calc(96px + env(safe-area-inset-bottom));}
   h1,h2,h3,p{margin:0;}
   button{font-family:inherit;cursor:pointer;border:none;background:none;}
 
@@ -168,6 +168,51 @@
   .btn-primary:active{background:var(--accent-press);}
   .btn-primary:disabled{opacity:.45;}
   .note{color:#e0982f;font-size:11.5px;margin-top:8px;display:none;}
+
+  /* Bottom nav */
+  .bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:35;display:flex;justify-content:center;
+    pointer-events:none;padding:0 12px calc(12px + env(safe-area-inset-bottom));}
+  .bottom-nav .wrap{pointer-events:auto;display:flex;width:100%;max-width:456px;background:var(--surface);
+    border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:6px;gap:4px;}
+  .bottom-nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 6px;
+    border-radius:13px;color:var(--muted);font-size:11.5px;font-weight:650;transition:all .15s;}
+  .bottom-nav button .ico{font-size:18px;line-height:1;}
+  .bottom-nav button.active{background:var(--accent-soft);color:var(--accent-press);}
+
+  /* Views */
+  .view{display:none;}
+  .view.active{display:block;animation:fade .22s ease;}
+
+  /* Compare */
+  .cmp-card{background:var(--surface);border:1px solid var(--line);border-radius:22px;
+    padding:18px 16px;box-shadow:var(--shadow);margin-bottom:14px;}
+  .cmp-card h3{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+  .cmp-card h3 .badge{width:28px;height:28px;border-radius:9px;background:var(--surface-2);
+    display:flex;align-items:center;justify-content:center;font-size:15px;}
+  .cmp-card.ice h3 .badge{background:#fef2e8;color:#e07b2b;}
+  .cmp-card.ev h3 .badge{background:var(--accent-soft);color:var(--accent-press);}
+  .cmp-bars{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:22px;
+    padding:18px 16px;box-shadow:var(--shadow);}
+  .cmp-row{margin-bottom:14px;}
+  .cmp-row:last-child{margin-bottom:0;}
+  .cmp-row .label{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;
+    font-weight:650;margin-bottom:6px;}
+  .cmp-row .label .v{font-size:15px;font-weight:750;color:var(--text);}
+  .cmp-row .bar{height:10px;background:var(--surface-2);border-radius:6px;overflow:hidden;}
+  .cmp-row .bar .fill{height:100%;border-radius:6px;transition:width .25s;}
+  .cmp-row.ice .fill{background:#f29b56;}
+  .cmp-row.ev .fill{background:var(--accent);}
+  .cmp-summary{margin-top:14px;background:var(--accent-soft);border-radius:16px;padding:16px;text-align:center;}
+  .cmp-summary .big{font-size:28px;font-weight:800;color:var(--accent-press);letter-spacing:-.02em;line-height:1.1;}
+  .cmp-summary .sub{font-size:12.5px;color:#3f7a64;margin-top:6px;line-height:1.5;}
+  .cmp-summary.idle{background:var(--surface-2);}
+  .cmp-summary.idle .big{color:var(--muted);font-size:15px;font-weight:600;}
+  .cmp-summary.idle .sub{color:var(--muted);}
+  .cmp-summary.warn{background:#fef2e8;}
+  .cmp-summary.warn .big{color:#c45a13;}
+  .cmp-summary.warn .sub{color:#8a4c1a;}
+  .ev-source{font-size:11.5px;color:var(--muted);margin-top:4px;}
+  .ev-source b{color:var(--text);font-weight:650;}
 </style>
 </head>
 <body>
@@ -179,6 +224,8 @@
     <p>Estimate from your charging stations</p>
   </div>
 </div>
+
+<div class="view active" id="view-calc">
 
 <!-- Station dropdown -->
 <div class="picker">
@@ -247,6 +294,75 @@
   Estimates assume a constant charge rate from each station's reference session.<br>
   Saved on this device only · works offline.
 </footer>
+
+</div><!-- /view-calc -->
+
+<div class="view" id="view-compare">
+
+  <div class="hero" style="padding:6px;">
+    <div class="seg">
+      <button class="active" data-unit="km" type="button">Per km</button>
+      <button data-unit="100" type="button">Per 100 km</button>
+    </div>
+  </div>
+
+  <div class="cmp-card ice" style="margin-top:14px;">
+    <h3><span class="badge">⛽</span> Gas car (ICE)</h3>
+    <div class="grid2">
+      <div class="field">
+        <label for="c-gas">Gas price (₱/L)</label>
+        <input type="number" id="c-gas" inputmode="decimal" value="65" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label for="c-kml">Mileage (km/L)</label>
+        <input type="number" id="c-kml" inputmode="decimal" value="12" min="0" step="0.1">
+      </div>
+    </div>
+  </div>
+
+  <div class="cmp-card ev">
+    <h3><span class="badge">⚡</span> Electric (EV)</h3>
+    <div class="grid2">
+      <div class="field">
+        <label for="c-kwh">Electricity (₱/kWh)</label>
+        <input type="number" id="c-kwh" inputmode="decimal" value="12.00" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label for="c-eff">Efficiency (kWh/100km)</label>
+        <input type="number" id="c-eff" inputmode="decimal" value="15" min="0" step="0.1">
+      </div>
+    </div>
+    <div class="ev-source" id="c-src">Using your selected station's price.</div>
+  </div>
+
+  <div class="cmp-bars">
+    <div class="cmp-row ice">
+      <div class="label"><span>Gas car</span><span class="v" id="c-ice-v">—</span></div>
+      <div class="bar"><div class="fill" id="c-ice-bar" style="width:0%;"></div></div>
+    </div>
+    <div class="cmp-row ev">
+      <div class="label"><span>Electric</span><span class="v" id="c-ev-v">—</span></div>
+      <div class="bar"><div class="fill" id="c-ev-bar" style="width:0%;"></div></div>
+    </div>
+    <div class="cmp-summary idle" id="c-sum">
+      <div class="big" id="c-sum-big">—</div>
+      <div class="sub" id="c-sum-sub">Enter values to compare.</div>
+    </div>
+  </div>
+
+  <footer>
+    Comparison is per-distance fuel/energy cost only. Excludes maintenance &amp; depreciation.
+  </footer>
+
+</div><!-- /view-compare -->
+
+<!-- Bottom nav -->
+<nav class="bottom-nav">
+  <div class="wrap">
+    <button class="active" data-view="calc" type="button"><span class="ico">⚡</span><span>Calculator</span></button>
+    <button data-view="compare" type="button"><span class="ico">⚖️</span><span>Compare</span></button>
+  </div>
+</nav>
 
 <!-- Drawer -->
 <div class="scrim" id="scrim"></div>
@@ -446,11 +562,11 @@
   });
 
   /* ---- segmented tabs ---- */
-  var segs=document.querySelectorAll('.seg button');
+  var segs=document.querySelectorAll('#view-calc .seg button');
   segs.forEach(function(b){
     b.addEventListener('click', function(){
       segs.forEach(function(x){x.classList.remove('active');}); b.classList.add('active');
-      document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('active');});
+      document.querySelectorAll('#view-calc .pane').forEach(function(p){p.classList.remove('active');});
       $('pane-'+b.dataset.pane).classList.add('active');
     });
   });
@@ -480,6 +596,84 @@
     setTimeout(function(){ $('st-name').focus(); }, 350);
   }
   $('dd-add').addEventListener('click', newStation);
+
+  /* ---- bottom nav (view switch) ---- */
+  var navBtns = document.querySelectorAll('.bottom-nav button');
+  navBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      navBtns.forEach(function(x){x.classList.remove('active');});
+      b.classList.add('active');
+      document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
+      $('view-'+b.dataset.view).classList.add('active');
+      if(b.dataset.view==='compare'){ syncEvPrice(); renderCompare(); }
+    });
+  });
+
+  /* ---- compare ---- */
+  var cmpUnit = 'km'; // 'km' or '100'
+  var cmpSegs = document.querySelectorAll('#view-compare .seg button');
+  cmpSegs.forEach(function(b){
+    b.addEventListener('click', function(){
+      cmpSegs.forEach(function(x){x.classList.remove('active');}); b.classList.add('active');
+      cmpUnit = b.dataset.unit;
+      renderCompare();
+    });
+  });
+
+  function syncEvPrice(){
+    // Default the EV price input to the selected station's price (if user hasn't edited)
+    var src = $('c-src');
+    if(activeName){
+      $('c-kwh').value = num(f.price.value).toFixed(2);
+      src.innerHTML = 'Using <b>'+activeName+'</b> · ₱'+num(f.price.value).toFixed(2)+'/kWh';
+    } else {
+      src.textContent = 'No station selected — using the price you enter.';
+    }
+  }
+
+  function renderCompare(){
+    var gas=num($('c-gas').value), kml=num($('c-kml').value);
+    var kwhP=num($('c-kwh').value), eff=num($('c-eff').value); // kWh/100km
+    var iceKm = kml>0 ? gas/kml : 0;             // ₱/km
+    var evKm  = eff>0 ? (kwhP*eff)/100 : 0;      // ₱/km
+    var mult = cmpUnit==='100' ? 100 : 1;
+    var unit = cmpUnit==='100' ? '/100 km' : '/km';
+    var iceV = iceKm*mult, evV = evKm*mult;
+
+    $('c-ice-v').textContent = iceKm>0 ? money(iceV)+' '+unit : '—';
+    $('c-ev-v').textContent  = evKm>0  ? money(evV)+' '+unit : '—';
+
+    var max = Math.max(iceV, evV, 0.0001);
+    $('c-ice-bar').style.width = iceKm>0 ? (iceV/max*100)+'%' : '0%';
+    $('c-ev-bar').style.width  = evKm>0  ? (evV/max*100)+'%'  : '0%';
+
+    var sum=$('c-sum'), big=$('c-sum-big'), sub=$('c-sum-sub');
+    sum.classList.remove('warn','idle');
+    if(iceKm>0 && evKm>0){
+      var diff = iceV - evV;
+      if(diff>0){
+        var pct = (diff/iceV)*100;
+        big.textContent = 'Save '+money(diff)+' '+unit;
+        sub.textContent = 'EV is '+pct.toFixed(0)+'% cheaper than gas at these rates.';
+      } else if(diff<0){
+        sum.classList.add('warn');
+        var pct2 = (-diff/evV)*100;
+        big.textContent = 'Gas wins by '+money(-diff)+' '+unit;
+        sub.textContent = 'Gas is '+pct2.toFixed(0)+'% cheaper than EV here.';
+      } else {
+        big.textContent = 'Break-even';
+        sub.textContent = 'Same cost at these rates.';
+      }
+    } else {
+      sum.classList.add('idle');
+      big.textContent = '—';
+      sub.textContent = 'Enter values to compare.';
+    }
+  }
+
+  ['c-gas','c-kml','c-kwh','c-eff'].forEach(function(id){
+    $(id).addEventListener('input', renderCompare);
+  });
 
   /* ---- init ---- */
   (function init(){
