@@ -37,6 +37,22 @@
 
   /* Station dropdown pill */
   .picker{position:relative;margin-bottom:18px;z-index:30;}
+  .picker.vehicle{z-index:32;}
+  .station-pill .ic.car{background:#eef4ff;color:#3b6df0;}
+  .vehicle-quick{display:flex;align-items:center;gap:10px;background:var(--surface);
+    border:1px solid var(--line);border-radius:14px;padding:9px 13px 9px 15px;
+    box-shadow:var(--shadow);margin-top:-8px;margin-bottom:18px;font-size:13px;
+    color:var(--muted);font-weight:600;}
+  .vehicle-quick.hidden{display:none;}
+  .vehicle-quick label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .vehicle-quick label b{color:var(--text);font-weight:650;}
+  .vehicle-quick .pct{position:relative;display:flex;align-items:baseline;gap:2px;}
+  .vehicle-quick .pct input{width:54px;text-align:right;font-size:17px;font-weight:750;
+    color:var(--accent-press);background:var(--surface-2);border:1px solid var(--line);
+    border-radius:9px;padding:5px 6px 5px 8px;outline:none;transition:border .15s;
+    cursor:ew-resize;touch-action:pan-y;}
+  .vehicle-quick .pct input:focus{border-color:var(--accent);}
+  .vehicle-quick .pct .sign{color:var(--accent-press);font-weight:700;font-size:14px;}
   .station-pill{width:100%;display:flex;align-items:center;gap:13px;background:var(--surface);
     border:1px solid var(--line);border-radius:16px;padding:13px 15px;box-shadow:var(--shadow);
     text-align:left;transition:transform .12s;}
@@ -252,6 +268,35 @@
 
 <div class="view active" id="view-calc">
 
+<!-- Vehicle dropdown -->
+<div class="picker vehicle">
+  <button class="station-pill" id="v-pill" type="button">
+    <div class="ic car">🚗</div>
+    <div class="body">
+      <div class="nm" id="v-pill-name">No vehicle</div>
+      <div class="mt" id="v-pill-meta">Tap to choose a vehicle</div>
+    </div>
+    <div class="chev">▾</div>
+  </button>
+  <div class="dropdown" id="v-dropdown">
+    <div id="v-list"></div>
+    <div class="dd-sep" id="v-dd-sep"></div>
+    <button class="dd-add" id="v-dd-add" type="button">
+      <span class="plus">＋</span> Add New
+    </button>
+  </div>
+</div>
+<div class="dd-scrim" id="v-dd-scrim"></div>
+
+<!-- Current charge quick editor -->
+<div class="vehicle-quick hidden" id="v-quick">
+  <label>Current charge on <b id="v-quick-name">—</b></label>
+  <div class="pct">
+    <input type="number" id="v-current-quick" inputmode="numeric" min="0" max="100" step="1" value="50">
+    <span class="sign">%</span>
+  </div>
+</div>
+
 <!-- Station dropdown -->
 <div class="picker">
   <button class="station-pill" id="pill" type="button">
@@ -275,8 +320,9 @@
 <!-- Estimate hero -->
 <div class="hero">
   <div class="seg">
-    <button class="active" data-pane="time" type="button">How much by time</button>
-    <button data-pane="money" type="button">How long by cost</button>
+    <button class="active" data-pane="time" type="button">By time</button>
+    <button data-pane="money" type="button">By cost</button>
+    <button data-pane="pct" type="button">To %</button>
   </div>
 
   <!-- time -> energy + cost -->
@@ -311,6 +357,21 @@
     <div class="result" id="res-money">
       <div class="big" id="m-out">—</div>
       <div class="sub" id="m-sub">Set up a station first.</div>
+    </div>
+  </div>
+
+  <!-- target % -> energy + time + cost -->
+  <div class="pane" id="pane-pct">
+    <div class="ask">Charge to what level?</div>
+    <div class="duo">
+      <div class="bigfield">
+        <input type="number" id="t-pct" inputmode="numeric" value="80" min="0" max="100" step="5">
+        <span class="u">% target</span>
+      </div>
+    </div>
+    <div class="result" id="res-pct">
+      <div class="big" id="p-out">—</div>
+      <div class="sub" id="p-sub">Select a vehicle first.</div>
     </div>
   </div>
 </div>
@@ -436,6 +497,42 @@
   </div>
 </div>
 
+<!-- Vehicle drawer -->
+<datalist id="v-presets"></datalist>
+<div class="scrim" id="v-scrim"></div>
+<div class="drawer" id="v-drawer">
+  <div class="grab"></div>
+  <div class="drawer-head">
+    <h2 id="v-drawer-title">New vehicle</h2>
+    <button class="close" id="v-drawer-close" type="button">✕</button>
+  </div>
+  <div class="drawer-body">
+
+    <div class="field">
+      <label for="v-name">Vehicle</label>
+      <input type="text" id="v-name" list="v-presets" placeholder="Type to search e.g. Tesla Model 3" maxlength="40" autocomplete="off">
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label for="v-battery">Battery (kWh)</label>
+        <input type="number" id="v-battery" inputmode="decimal" value="60" min="0" step="0.1">
+      </div>
+      <div class="field">
+        <label for="v-eff">Efficiency (kWh/100km)</label>
+        <input type="number" id="v-eff" inputmode="decimal" value="15" min="0" step="0.1">
+      </div>
+    </div>
+    <div class="field">
+      <label for="v-current">Current charge (%)</label>
+      <input type="number" id="v-current" inputmode="numeric" value="50" min="0" max="100" step="1">
+    </div>
+
+    <div class="save-row">
+      <button class="btn-primary" id="v-save" type="button" style="flex:1;">Save vehicle</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   var $ = function(id){ return document.getElementById(id); };
@@ -467,15 +564,81 @@
   function save(l){ try{localStorage.setItem(STORE,JSON.stringify(l));}catch(e){} }
   function setSel(n){ activeName=n; try{n?localStorage.setItem(SELKEY,n):localStorage.removeItem(SELKEY);}catch(e){} }
 
+  /* ---- vehicle storage ---- */
+  var VSTORE='evcalc.vehicles.v2', VSEL='evcalc.selected.vehicle.v2';
+  var activeVehicle=null, editingVehicle=null;
+  function loadV(){ try{return JSON.parse(localStorage.getItem(VSTORE))||[];}catch(e){return [];} }
+  function saveV(l){ try{localStorage.setItem(VSTORE,JSON.stringify(l));}catch(e){} }
+  function setSelV(n){ activeVehicle=n; try{n?localStorage.setItem(VSEL,n):localStorage.removeItem(VSEL);}catch(e){} }
+  function currentVehicle(){ if(!activeVehicle) return null; var list=loadV(); for(var i=0;i<list.length;i++){ if(list[i].name===activeVehicle) return list[i]; } return null; }
+  function updateCurrentPct(p){
+    var list=loadV();
+    for(var i=0;i<list.length;i++){ if(list[i].name===activeVehicle){ list[i].current=p; saveV(list); return; } }
+  }
+
+  /* Bundled vehicle presets (battery in kWh usable, eff in kWh/100km).
+     Used for autocomplete in the vehicle drawer — user can override any value. */
+  var PRESET_VEHICLES = [
+    {name:'Tesla Model 3 LR',           battery:75,    eff:14.5},
+    {name:'Tesla Model 3 RWD',          battery:60,    eff:13.5},
+    {name:'Tesla Model Y LR',           battery:75,    eff:16.0},
+    {name:'Tesla Model S',              battery:100,   eff:17.5},
+    {name:'BYD Atto 3',                 battery:60.5,  eff:16.0},
+    {name:'BYD Dolphin',                battery:44.9,  eff:14.0},
+    {name:'BYD Seal',                   battery:82.5,  eff:16.5},
+    {name:'BYD Tang EV',                battery:86.4,  eff:22.0},
+    {name:'BYD Han EV',                 battery:85.4,  eff:17.0},
+    {name:'Nissan Leaf',                battery:39,    eff:17.0},
+    {name:'Nissan Leaf e+',             battery:59,    eff:17.0},
+    {name:'Hyundai Ioniq 5',            battery:72.6,  eff:17.5},
+    {name:'Hyundai Ioniq 6',            battery:77.4,  eff:14.3},
+    {name:'Hyundai Kona Electric',      battery:64,    eff:14.7},
+    {name:'Kia EV6',                    battery:77.4,  eff:16.5},
+    {name:'Kia Niro EV',                battery:64.8,  eff:15.9},
+    {name:'MG ZS EV',                   battery:50,    eff:17.5},
+    {name:'MG4 EV',                     battery:64,    eff:16.0},
+    {name:'Wuling Air EV (Long Range)', battery:26.7,  eff:11.0},
+    {name:'Wuling Bingo',               battery:31.9,  eff:12.0},
+    {name:'Chery Omoda E5',             battery:61,    eff:15.5},
+    {name:'GAC Aion Y Plus',            battery:63.2,  eff:15.5},
+    {name:'JAC E10X',                   battery:30,    eff:12.5},
+    {name:'Volvo XC40 Recharge',        battery:78,    eff:19.5},
+    {name:'Volvo EX30',                 battery:64,    eff:16.0},
+    {name:'Mercedes EQB 300',           battery:66.5,  eff:19.0},
+    {name:'Mercedes EQS 450',           battery:107.8, eff:18.5},
+    {name:'BMW iX xDrive40',            battery:71,    eff:19.0},
+    {name:'BMW i4 eDrive40',            battery:80.7,  eff:16.0},
+    {name:'Audi Q4 e-tron',             battery:76.6,  eff:17.0},
+    {name:'Porsche Taycan',             battery:79.2,  eff:21.0},
+    {name:'Lexus RZ 450e',              battery:71.4,  eff:18.0},
+    {name:'Ora Funky Cat',              battery:48,    eff:16.0},
+    {name:'Smart #1',                   battery:66,    eff:17.0}
+  ];
+
   /* ---- render main estimate + pill ---- */
   function render(){
     var rate=curRate(), price=num(f.price.value), dur=durationOf(f.start.value,f.end.value);
+    var v=currentVehicle();
 
-    // pill
+    // station pill
     $('pill-name').textContent = activeName || 'Unsaved station';
     $('pill-meta').textContent = rate>0
       ? rate.toFixed(1)+' kW · '+money(price)+'/kWh · '+fmtHM(dur)
       : 'Tap to set up a station';
+
+    // vehicle pill + quick-% row
+    if(v){
+      $('v-pill-name').textContent = v.name;
+      $('v-pill-meta').textContent = num(v.battery).toFixed(1).replace(/\.0$/,'')+' kWh · '+num(v.current||0)+'% now';
+      $('v-quick').classList.remove('hidden');
+      $('v-quick-name').textContent = v.name;
+      var qi=$('v-current-quick');
+      if(document.activeElement!==qi) qi.value = num(v.current||0);
+    } else {
+      $('v-pill-name').textContent = 'No vehicle';
+      $('v-pill-meta').textContent = 'Tap to choose a vehicle';
+      $('v-quick').classList.add('hidden');
+    }
 
     // drawer mini stats + note
     $('dur-note').style.display = (f.start.value&&f.end.value&&dur===0)?'block':'none';
@@ -509,6 +672,34 @@
       $('m-out').textContent='—';
       $('m-sub').textContent=(ready&&price>0)?'Enter a budget.':'Set up a station first.';
       $('res-money').classList.add('idle');
+    }
+
+    // mode 3: to target %
+    if(!v || !(num(v.battery)>0)){
+      $('p-out').textContent='—';
+      $('p-sub').textContent='Select a vehicle first.';
+      $('res-pct').classList.add('idle');
+    } else {
+      var targetPct=num($('t-pct').value); if(targetPct>100) targetPct=100; if(targetPct<0) targetPct=0;
+      var curPct=num(v.current||0);
+      var pctDelta=targetPct-curPct;
+      if(pctDelta<=0){
+        $('p-out').textContent='Already there';
+        $('p-sub').textContent='Target '+targetPct+'% ≤ current '+curPct+'%.';
+        $('res-pct').classList.add('idle');
+      } else {
+        var energy3=num(v.battery)*pctDelta/100;
+        if(ready){
+          var hrs3=energy3/rate, cost3=energy3*price;
+          $('p-out').textContent=fmtHM(hrs3);
+          $('p-sub').innerHTML='≈ '+energy3.toFixed(1)+' kWh &nbsp;·&nbsp; '+money(cost3)+' (from '+curPct+'% to '+targetPct+'%)';
+          $('res-pct').classList.remove('idle');
+        } else {
+          $('p-out').textContent=energy3.toFixed(1)+' kWh';
+          $('p-sub').textContent='Set up a station to see time & cost.';
+          $('res-pct').classList.add('idle');
+        }
+      }
     }
   }
 
@@ -591,8 +782,150 @@
       render();
     });
   });
-  ['t-hours','t-mins','m-amount'].forEach(function(id){
+  ['t-hours','t-mins','m-amount','t-pct'].forEach(function(id){
     $(id).addEventListener('input', render);
+  });
+
+  /* ---- vehicle list in dropdown ---- */
+  function renderVList(){
+    var list=loadV(), wrap=$('v-list');
+    wrap.innerHTML='';
+    $('v-dd-sep').style.display = list.length ? 'block' : 'none';
+    if(!list.length){
+      var e=document.createElement('div');
+      e.className='dd-empty'; e.textContent='No vehicles yet.';
+      wrap.appendChild(e); return;
+    }
+    list.forEach(function(vh){
+      var row=document.createElement('div');
+      row.className='dd-row'+(vh.name===activeVehicle?' active':'');
+
+      var pick=document.createElement('div'); pick.className='pick';
+      var ic=document.createElement('div'); ic.className='ic'; ic.textContent='🚗';
+      var info=document.createElement('div'); info.className='info';
+      var nm=document.createElement('div'); nm.className='nm'; nm.textContent=vh.name;
+      var mt=document.createElement('div'); mt.className='mt';
+      mt.textContent=num(vh.battery).toFixed(1).replace(/\.0$/,'')+' kWh · '+num(vh.current||0)+'% now';
+      info.appendChild(nm); info.appendChild(mt);
+      pick.appendChild(ic); pick.appendChild(info);
+      pick.addEventListener('click', function(){ selectVehicle(vh); closeVDropdown(); });
+
+      var edit=document.createElement('button'); edit.className='act edit'; edit.textContent='✎'; edit.type='button';
+      edit.setAttribute('aria-label','Edit '+vh.name);
+      edit.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        editVehicle(vh);
+      });
+
+      var del=document.createElement('button'); del.className='act del'; del.textContent='🗑'; del.type='button';
+      del.setAttribute('aria-label','Delete '+vh.name);
+      del.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        if(!window.confirm('Delete vehicle "'+vh.name+'"?\nThis can’t be undone.')) return;
+        var next=loadV().filter(function(s){return s.name!==vh.name;});
+        saveV(next);
+        if(activeVehicle===vh.name){ setSelV(null); }
+        renderVList(); render();
+      });
+
+      row.appendChild(pick); row.appendChild(edit); row.appendChild(del);
+      wrap.appendChild(row);
+    });
+  }
+
+  function selectVehicle(vh){
+    setSelV(vh.name);
+    render(); renderVList();
+  }
+
+  /* ---- vehicle datalist (autocomplete) ---- */
+  (function fillPresetDatalist(){
+    var dl=$('v-presets');
+    PRESET_VEHICLES.forEach(function(p){
+      var o=document.createElement('option'); o.value=p.name; dl.appendChild(o);
+    });
+  })();
+  function findPreset(name){
+    name=(name||'').trim().toLowerCase();
+    for(var i=0;i<PRESET_VEHICLES.length;i++){
+      if(PRESET_VEHICLES[i].name.toLowerCase()===name) return PRESET_VEHICLES[i];
+    }
+    return null;
+  }
+  $('v-name').addEventListener('input', function(){
+    var p=findPreset(this.value);
+    if(p){
+      $('v-battery').value = p.battery;
+      $('v-eff').value = p.eff;
+    }
+  });
+
+  /* ---- vehicle save ---- */
+  $('v-save').addEventListener('click', function(){
+    var name=$('v-name').value.trim();
+    if(!name){ $('v-name').focus(); return; }
+    var battery=num($('v-battery').value);
+    if(battery<=0){ $('v-battery').focus(); return; }
+    var cur=num($('v-current').value); if(cur<0) cur=0; if(cur>100) cur=100;
+    var vh={name:name, battery:battery, eff:num($('v-eff').value), current:cur};
+    var list=loadV().filter(function(s){return s.name!==name && s.name!==editingVehicle;});
+    list.push(vh); saveV(list); setSelV(name);
+    editingVehicle=null;
+    render(); renderVList();
+    var b=$('v-save'); var o=b.textContent; b.textContent='Saved ✓';
+    setTimeout(function(){ b.textContent=o; closeVDrawer(); },650);
+  });
+
+  /* ---- vehicle dropdown ---- */
+  function openVDropdown(){ renderVList(); $('v-dropdown').classList.add('open'); $('v-pill').classList.add('open'); $('v-dd-scrim').classList.add('show'); }
+  function closeVDropdown(){ $('v-dropdown').classList.remove('open'); $('v-pill').classList.remove('open'); $('v-dd-scrim').classList.remove('show'); }
+  $('v-pill').addEventListener('click', function(){
+    $('v-dropdown').classList.contains('open') ? closeVDropdown() : openVDropdown();
+  });
+  $('v-dd-scrim').addEventListener('click', closeVDropdown);
+
+  /* ---- vehicle drawer ---- */
+  function openVDrawer(){ $('v-drawer').classList.add('open'); $('v-scrim').classList.add('show'); }
+  function closeVDrawer(){ $('v-drawer').classList.remove('open'); $('v-scrim').classList.remove('show'); editingVehicle=null; }
+  $('v-drawer-close').addEventListener('click', closeVDrawer);
+  $('v-scrim').addEventListener('click', closeVDrawer);
+
+  function newVehicle(){
+    editingVehicle=null;
+    $('v-name').value=''; $('v-battery').value='60'; $('v-eff').value='15'; $('v-current').value='50';
+    $('v-drawer-title').textContent='New vehicle';
+    closeVDropdown();
+    openVDrawer();
+    setTimeout(function(){ $('v-name').focus(); }, 350);
+  }
+  $('v-dd-add').addEventListener('click', newVehicle);
+
+  function editVehicle(vh){
+    editingVehicle=vh.name;
+    $('v-name').value=vh.name;
+    $('v-battery').value=vh.battery;
+    $('v-eff').value=vh.eff!=null?vh.eff:'';
+    $('v-current').value=vh.current!=null?vh.current:0;
+    setSelV(vh.name);
+    $('v-drawer-title').textContent='Edit vehicle';
+    render(); renderVList();
+    closeVDropdown();
+    openVDrawer();
+  }
+
+  /* ---- quick current-% editor on main screen ---- */
+  $('v-current-quick').addEventListener('input', function(){
+    if(!activeVehicle) return;
+    var p=num(this.value); if(p<0) p=0; if(p>100) p=100;
+    updateCurrentPct(p);
+    // re-render mode 3 + pill meta (but don't clobber the input the user is dragging)
+    var v=currentVehicle();
+    if(v){
+      $('v-pill-meta').textContent = num(v.battery).toFixed(1).replace(/\.0$/,'')+' kWh · '+num(v.current||0)+'% now';
+    }
+    // recompute mode 3 by re-rendering — render() guards against active-element clobber
+    render();
+    renderVList();
   });
 
   /* ---- segmented tabs ---- */
@@ -668,14 +1001,19 @@
   });
 
   function syncEvPrice(){
-    // Default the EV price input to the selected station's price (if user hasn't edited)
+    // Default the EV price input to the selected station's price + eff to vehicle's eff
     var src = $('c-src');
+    var bits=[];
     if(activeName){
       $('c-kwh').value = num(f.price.value).toFixed(2);
-      src.innerHTML = 'Using <b>'+activeName+'</b> · ₱'+num(f.price.value).toFixed(2)+'/kWh';
-    } else {
-      src.textContent = 'No station selected — using the price you enter.';
+      bits.push('<b>'+activeName+'</b> · ₱'+num(f.price.value).toFixed(2)+'/kWh');
     }
+    var v=currentVehicle();
+    if(v && num(v.eff)>0){
+      $('c-eff').value = num(v.eff);
+      bits.push('<b>'+v.name+'</b> · '+num(v.eff)+' kWh/100km');
+    }
+    src.innerHTML = bits.length ? 'Using '+bits.join(' · ') : 'No station/vehicle selected — using values you enter.';
   }
 
   function renderCompare(){
@@ -782,9 +1120,11 @@
     input.addEventListener('click', function(ev){ if(justDragged){ ev.preventDefault(); ev.stopPropagation(); } });
   }
   [
-    ['t-hours',1],['t-mins',15],['m-amount',100],
+    ['t-hours',1],['t-mins',15],['m-amount',100],['t-pct',5],
     ['c-gas',1],['c-kml',1],['c-kwh',1],['c-eff',1],
-    ['energy',5],['price',1]
+    ['energy',5],['price',1],
+    ['v-battery',1],['v-eff',0.5],['v-current',1],
+    ['v-current-quick',1]
   ].forEach(function(p){ attachScrub($(p[0]), p[1]); });
 
   /* ---- init ---- */
@@ -794,7 +1134,14 @@
     var match=sel&&list.filter(function(s){return s.name===sel;})[0];
     if(match){ activeName=match.name; fillForm(match); }
     else if(list.length){ activeName=list[0].name; fillForm(list[0]); }
-    render(); renderList();
+
+    var vlist=loadV(), vsel=null;
+    try{ vsel=localStorage.getItem(VSEL); }catch(e){}
+    var vmatch=vsel&&vlist.filter(function(s){return s.name===vsel;})[0];
+    if(vmatch){ activeVehicle=vmatch.name; }
+    else if(vlist.length){ activeVehicle=vlist[0].name; setSelV(vlist[0].name); }
+
+    render(); renderList(); renderVList();
     // No stations yet → prompt the user to define one first
     if(!list.length){ openDrawer(); setTimeout(function(){ $('st-name').focus(); }, 350); }
   })();
