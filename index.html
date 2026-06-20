@@ -99,6 +99,30 @@
   .bigfield{display:flex;flex-direction:column;align-items:center;}
   .bigfield input{width:96px;text-align:center;font-size:40px;font-weight:750;letter-spacing:-.02em;
     border:none;background:none;color:var(--text);outline:none;padding:0;}
+  .bigfield input[data-scrub],
+  .field input[data-scrub]{cursor:ew-resize;touch-action:pan-y;}
+  .bigfield.scrubbing input{color:var(--accent-press);}
+  body.scrubbing{cursor:ew-resize;user-select:none;-webkit-user-select:none;}
+
+  /* Scrub affordances */
+  .bigfield .chev-row{display:flex;align-items:center;gap:6px;}
+  .bigfield .chev{font-size:16px;font-weight:700;line-height:1;color:var(--muted);
+    opacity:.32;user-select:none;pointer-events:none;
+    transition:opacity .2s,color .2s,transform .2s;}
+  .bigfield.scrubbing .chev{opacity:.9;color:var(--accent-press);}
+  .bigfield.scrubbing .chev-l{transform:translateX(-3px);}
+  .bigfield.scrubbing .chev-r{transform:translateX(3px);}
+  @keyframes chevHintL{0%,100%{transform:translateX(0);opacity:.32;}50%{transform:translateX(-4px);opacity:.85;}}
+  @keyframes chevHintR{0%,100%{transform:translateX(0);opacity:.32;}50%{transform:translateX(4px);opacity:.85;}}
+  .bigfield .chev-l{animation:chevHintL 1.6s ease-in-out .5s 2;}
+  .bigfield .chev-r{animation:chevHintR 1.6s ease-in-out .5s 2;}
+
+  .field.scrub-host{position:relative;}
+  .field.scrub-host input{padding-right:34px;}
+  .field.scrub-host::after{content:'↔';position:absolute;right:13px;bottom:12px;
+    font-size:14px;font-weight:700;color:var(--muted);opacity:.55;pointer-events:none;
+    transition:opacity .2s,color .2s;}
+  .field.scrub-host:focus-within::after{opacity:.95;color:var(--accent-press);}
   .bigfield .u{font-size:12px;color:var(--muted);font-weight:600;margin-top:2px;text-transform:uppercase;letter-spacing:.04em;}
   .duo .sep{font-size:34px;font-weight:600;color:var(--line);padding-bottom:18px;}
   .moneyfield{display:flex;align-items:center;justify-content:center;gap:2px;}
@@ -697,6 +721,71 @@
   ['c-gas','c-kml','c-kwh','c-eff'].forEach(function(id){
     $(id).addEventListener('input', renderCompare);
   });
+
+  /* ---- drag-to-scrub number inputs (mobile + desktop pointer) ---- */
+  function decimals(step){ var s=String(step), i=s.indexOf('.'); return i<0?0:s.length-i-1; }
+  function attachScrub(input, step){
+    if(!input) return;
+    input.setAttribute('data-scrub','');
+    var pxPerStep=14, threshold=6, dp=decimals(step);
+    var pid=null, startX=0, startVal=0, dragging=false, justDragged=false;
+    var wrap=input.closest('.bigfield');
+    // visual affordance: chevrons around the big number, ↔ glyph in compact field
+    if(wrap && !wrap.querySelector('.chev-row')){
+      var row=document.createElement('div'); row.className='chev-row';
+      var cl=document.createElement('span'); cl.className='chev chev-l'; cl.textContent='◂'; cl.setAttribute('aria-hidden','true');
+      var cr=document.createElement('span'); cr.className='chev chev-r'; cr.textContent='▸'; cr.setAttribute('aria-hidden','true');
+      wrap.insertBefore(row, input);
+      row.appendChild(cl); row.appendChild(input); row.appendChild(cr);
+    } else if(!wrap){
+      var fd=input.closest('.field'); if(fd) fd.classList.add('scrub-host');
+    }
+    input.addEventListener('pointerdown', function(ev){
+      if(ev.pointerType==='mouse' && ev.button!==0) return;
+      pid=ev.pointerId; startX=ev.clientX; startVal=num(input.value); dragging=false;
+    });
+    input.addEventListener('pointermove', function(ev){
+      if(ev.pointerId!==pid) return;
+      var dx=ev.clientX-startX;
+      if(!dragging){
+        if(Math.abs(dx)<threshold) return;
+        dragging=true;
+        try{ input.setPointerCapture(pid); }catch(e){}
+        input.blur();
+        document.body.classList.add('scrubbing');
+        if(wrap) wrap.classList.add('scrubbing');
+      }
+      ev.preventDefault();
+      var steps=Math.round(dx/pxPerStep);
+      var v=startVal + steps*step;
+      var lo = input.min!==''?parseFloat(input.min):-Infinity;
+      var hi = input.max!==''?parseFloat(input.max):Infinity;
+      // clamp upper bound to a step-aligned value (e.g. minutes max 59 → 45 with step 15)
+      var hiEff = isFinite(hi) ? Math.floor(hi/step)*step : Infinity;
+      if(v<lo) v=lo; if(v>hiEff) v=hiEff;
+      input.value = dp>0 ? v.toFixed(dp) : String(Math.round(v));
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+    });
+    function end(ev){
+      if(ev.pointerId!==pid) return;
+      if(dragging){
+        justDragged=true;
+        setTimeout(function(){ justDragged=false; }, 250);
+        try{ input.releasePointerCapture(pid); }catch(e){}
+        document.body.classList.remove('scrubbing');
+        if(wrap) wrap.classList.remove('scrubbing');
+      }
+      dragging=false; pid=null;
+    }
+    input.addEventListener('pointerup', end);
+    input.addEventListener('pointercancel', end);
+    input.addEventListener('click', function(ev){ if(justDragged){ ev.preventDefault(); ev.stopPropagation(); } });
+  }
+  [
+    ['t-hours',1],['t-mins',15],['m-amount',100],
+    ['c-gas',1],['c-kml',1],['c-kwh',1],['c-eff',1],
+    ['energy',5],['price',1]
+  ].forEach(function(p){ attachScrub($(p[0]), p[1]); });
 
   /* ---- init ---- */
   (function init(){
