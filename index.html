@@ -62,8 +62,9 @@
   .dd-row .info{min-width:0;}
   .dd-row .nm{font-size:14.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .dd-row .mt{font-size:11.5px;color:var(--muted);margin-top:1px;}
-  .dd-row .del{width:34px;height:34px;flex:0 0 auto;border-radius:9px;color:#c4ccd6;font-size:15px;
+  .dd-row .act{width:34px;height:34px;flex:0 0 auto;border-radius:9px;color:#c4ccd6;font-size:15px;
     display:flex;align-items:center;justify-content:center;}
+  .dd-row .edit:active{color:var(--accent-press);background:var(--accent-soft);}
   .dd-row .del:active{color:#ef4444;background:#fef2f2;}
   .dd-sep{height:1px;background:var(--line);margin:6px 8px;}
   .dd-add{width:100%;display:flex;align-items:center;gap:11px;padding:11px 10px;border-radius:12px;
@@ -437,7 +438,7 @@
 
   /* ---- storage ---- */
   var STORE='evcalc.stations.v2', SELKEY='evcalc.selected.v2';
-  var activeName=null;
+  var activeName=null, editingName=null;
   function load(){ try{return JSON.parse(localStorage.getItem(STORE))||[];}catch(e){return [];} }
   function save(l){ try{localStorage.setItem(STORE,JSON.stringify(l));}catch(e){} }
   function setSel(n){ activeName=n; try{n?localStorage.setItem(SELKEY,n):localStorage.removeItem(SELKEY);}catch(e){} }
@@ -512,7 +513,15 @@
       pick.appendChild(ic); pick.appendChild(info);
       pick.addEventListener('click', function(){ selectStation(st); closeDropdown(); });
 
-      var del=document.createElement('button'); del.className='del'; del.textContent='🗑'; del.type='button';
+      var edit=document.createElement('button'); edit.className='act edit'; edit.textContent='✎'; edit.type='button';
+      edit.setAttribute('aria-label','Edit '+st.name);
+      edit.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        editStation(st);
+      });
+
+      var del=document.createElement('button'); del.className='act del'; del.textContent='🗑'; del.type='button';
+      del.setAttribute('aria-label','Delete '+st.name);
       del.addEventListener('click', function(ev){
         ev.stopPropagation();
         if(!window.confirm('Delete station "'+st.name+'"?\nThis can’t be undone.')) return;
@@ -522,7 +531,7 @@
         renderList(); render();
       });
 
-      row.appendChild(pick); row.appendChild(del);
+      row.appendChild(pick); row.appendChild(edit); row.appendChild(del);
       wrap.appendChild(row);
     });
   }
@@ -541,8 +550,9 @@
     var name=$('st-name').value.trim();
     if(!name){ $('st-name').focus(); return; }
     var st={name:name,start:f.start.value,end:f.end.value,energy:f.energy.value,price:f.price.value};
-    var list=load().filter(function(s){return s.name!==name;});
+    var list=load().filter(function(s){return s.name!==name && s.name!==editingName;});
     list.push(st); save(list); setSel(name);
+    editingName=null;
     render(); renderList();
     // brief confirm, then close the drawer back to the estimate
     var b=$('st-save'); var o=b.textContent; b.textContent='Saved ✓';
@@ -581,21 +591,34 @@
 
   /* ---- drawer (define / add new) ---- */
   function openDrawer(){ $('drawer').classList.add('open'); $('scrim').classList.add('show'); }
-  function closeDrawer(){ $('drawer').classList.remove('open'); $('scrim').classList.remove('show'); }
+  function closeDrawer(){ $('drawer').classList.remove('open'); $('scrim').classList.remove('show'); editingName=null; }
   $('drawer-close').addEventListener('click', closeDrawer);
   $('scrim').addEventListener('click', closeDrawer);
 
   // Add New → blank form
   function newStation(){
+    editingName=null;
     setSel(null);
     f.start.value='22:00'; f.end.value='06:00'; f.energy.value='40'; f.price.value='12.00';
     $('st-name').value='';
+    $('drawer-title').textContent='New charging station';
     render();
     closeDropdown();
     openDrawer();
     setTimeout(function(){ $('st-name').focus(); }, 350);
   }
   $('dd-add').addEventListener('click', newStation);
+
+  // Edit existing → prefilled form, save-in-place (rename supported)
+  function editStation(st){
+    editingName=st.name;
+    fillForm(st);
+    setSel(st.name);
+    $('drawer-title').textContent='Edit station';
+    render(); renderList();
+    closeDropdown();
+    openDrawer();
+  }
 
   /* ---- bottom nav (view switch) ---- */
   var navBtns = document.querySelectorAll('.bottom-nav button');
