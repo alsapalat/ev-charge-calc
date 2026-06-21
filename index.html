@@ -313,6 +313,23 @@
   @keyframes drift{0%,100%{opacity:.55;}50%{opacity:1;}}
   .scrub-hint{animation:drift 2.4s ease-in-out infinite;}
 
+  /* Toggle pill — small editorial chip used on time/cost panes */
+  .toggle-pill{display:inline-flex;align-items:center;gap:8px;margin:10px auto 0;
+    padding:7px 12px 7px 10px;background:var(--surface);
+    border:1px solid var(--hair);border-radius:999px;
+    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+    color:var(--muted);letter-spacing:.14em;text-transform:uppercase;
+    cursor:pointer;transition:background .18s,color .18s,border-color .18s,opacity .18s;}
+  .toggle-pill:hover{border-color:var(--hair-strong);color:var(--ink-2);}
+  .toggle-pill .dot{width:8px;height:8px;border-radius:50%;
+    background:transparent;border:1.5px solid var(--muted-2);
+    transition:background .18s,border-color .18s;}
+  .toggle-pill[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink);}
+  .toggle-pill[aria-pressed="true"] .dot{background:var(--surface);border-color:var(--surface);}
+  .toggle-pill[disabled]{opacity:.4;pointer-events:none;}
+  .toggle-pill.compact{margin:0;padding:5px 9px 5px 8px;font-size:9.5px;letter-spacing:.12em;flex:0 0 auto;}
+  .toggle-pill.compact .dot{width:6px;height:6px;border-width:1.5px;}
+
   /* ============ HERO / ESTIMATE ============ */
   .seg{display:flex;gap:0;border-bottom:1px solid var(--hair);
     padding:6px 0 0;margin-top:8px;position:relative;justify-content:stretch;}
@@ -361,6 +378,33 @@
   .result.idle .r-label{color:var(--muted-2);}
   .result.bumping .big{animation:bump .45s var(--ease-spring);}
   @keyframes bump{0%{transform:scale(.92);}55%{transform:scale(1.04);}100%{transform:scale(1);}}
+
+  /* Over/under state on .pane .bigfield — solid colored border replaces the default dashed one.
+     Scoped to .pane so v-quick-strip and drawer bigfields are untouched. */
+  .pane .bigfield.is-over{border-style:solid;border-color:var(--warn);background:var(--warn-soft);}
+  .pane .bigfield.is-over .u{color:var(--warn);}
+  .pane .bigfield.is-over input{color:var(--warn);}
+  .pane .bigfield.is-under{border-style:solid;border-color:var(--accent-ink);}
+  .pane .bigfield.is-under .u{color:var(--accent-ink);}
+
+  /* Hint/annotation row — both .scrub-hint.center and .field-annot occupy the same fixed slot
+     so swapping between drag hint and recommended/excess annotation never shifts layout. */
+  .scrub-hint.center,.field-annot{height:22px;margin:6px auto 0;display:flex;
+    align-items:center;justify-content:center;width:fit-content;max-width:100%;}
+  .field-annot{gap:10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
+    letter-spacing:.14em;text-transform:uppercase;line-height:1;
+    animation:annotIn .32s var(--ease-spring);}
+  .field-annot .fa-tgt,.field-annot .fa-over,.field-annot .fa-under{
+    display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+  .field-annot .fa-tgt{color:var(--accent-ink);}
+  .field-annot .fa-over{color:var(--warn);}
+  .field-annot .fa-under{color:var(--muted);}
+  .field-annot .fa-sep{color:var(--hair-strong);font-weight:400;}
+  .field-annot svg{width:11px;height:11px;flex:0 0 auto;}
+  /* Pulse uses outset box-shadow so it doesn't change the element's box size */
+  .field-annot.is-over{animation:annotIn .32s var(--ease-spring),warnPulse 1.2s ease-out 1;}
+  @keyframes annotIn{0%{transform:translateY(3px);opacity:0;}100%{transform:translateY(0);opacity:1;}}
+  @keyframes warnPulse{0%{box-shadow:0 0 0 0 rgba(180,83,9,.45);}70%{box-shadow:0 0 0 8px rgba(180,83,9,0);}100%{box-shadow:0 0 0 0 rgba(180,83,9,0);}}
 
   /* ============ BOTTOM NAV ============ */
   .bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:35;display:flex;justify-content:center;
@@ -595,6 +639,12 @@
     <symbol id="i-drag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M4 12h16M7 9l-3 3 3 3M17 9l3 3-3 3"/>
     </symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 4 2.5 20h19L12 4Z"/><path d="M12 10v4"/><circle cx="12" cy="17.5" r=".6" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r=".7" fill="currentColor"/>
+    </symbol>
   </defs>
 </svg>
 
@@ -634,12 +684,14 @@
 
   <!-- Compact current-charge strip (under header, only when vehicle selected) -->
   <div class="v-quick-strip hidden" id="v-quick">
-    <span class="lbl">Charge on <b id="v-quick-name">—</b></span>
+    <span class="lbl">Current %</span>
     <div class="bigfield small">
       <input type="number" id="v-current-quick" inputmode="numeric" min="0" max="100" step="1" value="50">
       <span class="u">%</span>
     </div>
-    <span class="scrub-hint compact"><svg><use href="#i-drag"/></svg>drag</span>
+    <button class="toggle-pill compact" id="inc-cur" type="button" aria-pressed="false" title="Show excess vs. what's needed to fill to 100%">
+      <span class="dot"></span>Include in calc
+    </button>
   </div>
 
   <!-- Station carousel: horizontal scroll of station cards -->
@@ -678,7 +730,8 @@
           <span class="u">minutes</span>
         </div>
       </div>
-      <div class="scrub-hint center"><svg><use href="#i-drag"/></svg>drag values to edit</div>
+      <div class="scrub-hint center" id="t-hint"><svg><use href="#i-drag"/></svg>drag values to edit</div>
+      <div class="field-annot hidden" id="t-annot"></div>
       <div class="result idle" id="res-time">
         <div class="r-label">Estimate</div>
         <div class="big" id="t-out">—</div>
@@ -695,7 +748,8 @@
           <span class="u">budget</span>
         </div>
       </div>
-      <div class="scrub-hint center"><svg><use href="#i-drag"/></svg>drag to edit budget</div>
+      <div class="scrub-hint center" id="m-hint"><svg><use href="#i-drag"/></svg>drag to edit budget</div>
+      <div class="field-annot hidden" id="m-annot"></div>
       <div class="result idle" id="res-money">
         <div class="r-label">Charges for</div>
         <div class="big" id="m-out">—</div>
@@ -976,6 +1030,40 @@
   }
   function curRate(){ var d=durationOf(f.start.value,f.end.value); return d>0?num(f.energy.value)/d:0; }
 
+  /* ---- HTML builder for the field annotation row (target · delta) ---- */
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function annotHTML(target, delta, kind){
+    var deltaCls = kind==='over' ? 'fa-over' : (kind==='under' ? 'fa-under' : 'fa-under');
+    var deltaIcon = kind==='over' ? '<svg><use href="#i-warn"/></svg>' : '';
+    return '<span class="fa-tgt"><svg><use href="#i-check"/></svg>'+esc(target)+'</span>'
+      + '<span class="fa-sep">·</span>'
+      + '<span class="'+deltaCls+'">'+deltaIcon+esc(delta)+'</span>';
+  }
+  function setAnnot(hintEl, annotEl, html, kind){
+    if(html==null){
+      hintEl.classList.remove('hidden');
+      annotEl.classList.add('hidden');
+      annotEl.innerHTML='';
+      annotEl.classList.remove('is-over','is-under');
+    } else {
+      hintEl.classList.add('hidden');
+      annotEl.classList.remove('hidden');
+      annotEl.innerHTML=html;
+      annotEl.classList.remove('is-over','is-under');
+      if(kind) annotEl.classList.add('is-'+kind);
+    }
+  }
+  function setFieldsState(ids, state){
+    ids.forEach(function(id){
+      var f=$(id); if(!f) return;
+      var box=f.closest && f.closest('.bigfield');
+      if(!box) return;
+      box.classList.remove('is-over','is-under');
+      if(state) box.classList.add('is-'+state);
+    });
+  }
+
   /* ---- micro: bump a result block when it switches to ready ---- */
   function bumpIfReady(el){
     if(!el.classList.contains('idle') && !el.dataset.lastReady){
@@ -1004,6 +1092,21 @@
   function updateCurrentPct(p){
     var list=loadV();
     for(var i=0;i<list.length;i++){ if(list[i].name===activeVehicle){ list[i].current=p; saveV(list); return; } }
+  }
+
+  /* Toggle: factor in current charge % on By time / By cost panes */
+  var INC_KEY='evcalc.include-current.v1';
+  var includeCurrent=false;
+  try{ includeCurrent = localStorage.getItem(INC_KEY)==='1'; }catch(e){}
+  function syncIncPills(){
+    var b=$('inc-cur'); if(!b) return;
+    b.setAttribute('aria-pressed', includeCurrent?'true':'false');
+  }
+  function setIncludeCurrent(v){
+    includeCurrent = !!v;
+    try{ localStorage.setItem(INC_KEY, includeCurrent?'1':'0'); }catch(e){}
+    syncIncPills();
+    render();
   }
 
   /* Bundled vehicle presets (battery in kWh usable, eff in kWh/100km).
@@ -1066,7 +1169,6 @@
       $('v-pill-name').textContent = v.name;
       $('v-pill-meta').textContent = num(v.battery).toFixed(1).replace(/\.0$/,'')+' kWh · '+num(v.current||0)+'%';
       $('v-quick').classList.remove('hidden');
-      $('v-quick-name').textContent = v.name;
       var qi=$('v-current-quick');
       if(document.activeElement!==qi) qi.value = num(v.current||0);
     } else {
@@ -1083,12 +1185,43 @@
 
     var ready = rate>0;
 
+    // Sync include-current pill in quick strip (strip itself hidden when no vehicle)
+    var hasVeh = !!v && num(v.battery)>0;
+    var curPct = hasVeh ? Math.max(0, Math.min(100, num(v.current||0))) : 0;
+    var battery = hasVeh ? num(v.battery) : 0;
+    var needEnergy = hasVeh ? (100-curPct)/100 * battery : 0;
+    syncIncPills();
+    var useInc = includeCurrent && hasVeh;
+
     // mode 1
     var hrs=num($('t-hours').value)+num($('t-mins').value)/60;
+    var tHint=$('t-hint'), tAnnot=$('t-annot');
+    var tFields=['t-hours','t-mins'];
+    setFieldsState(tFields, null);
+    setAnnot(tHint, tAnnot, null);
     if(ready&&hrs>0){
       var en=rate*hrs;
       $('t-out').textContent=en.toFixed(1)+' kWh ≈ '+money(en*price);
-      $('t-sub').textContent=rate.toFixed(1)+' kW for '+fmtHM(hrs);
+      $('t-sub').textContent = rate.toFixed(1)+' kW for '+fmtHM(hrs);
+      if(useInc){
+        if(curPct>=100){
+          setFieldsState(tFields, 'over');
+          setAnnot(tHint, tAnnot, annotHTML('Battery full', 'All '+fmtHM(hrs)+' over', 'over'), 'over');
+        } else if(en > needEnergy){
+          var exE = en - needEnergy, exH = exE/rate, exC = exE*price;
+          setFieldsState(tFields, 'over');
+          setAnnot(tHint, tAnnot,
+            annotHTML('Stop at '+fmtHM(needEnergy/rate)+' · '+money(needEnergy*price),
+                      '+'+fmtHM(exH)+' / '+money(exC)+' over', 'over'),
+            'over');
+        } else {
+          var reachedPct = curPct + (en/battery)*100;
+          setFieldsState(tFields, 'under');
+          setAnnot(tHint, tAnnot,
+            annotHTML('Fills to 100% at '+fmtHM(needEnergy/rate), 'Reaches '+reachedPct.toFixed(0)+'%', 'under'),
+            'under');
+        }
+      }
       $('res-time').classList.remove('idle');
     } else {
       $('t-out').textContent='—';
@@ -1099,10 +1232,33 @@
 
     // mode 2
     var budget=num($('m-amount').value);
+    var mHint=$('m-hint'), mAnnot=$('m-annot');
+    var mFields=['m-amount'];
+    setFieldsState(mFields, null);
+    setAnnot(mHint, mAnnot, null);
     if(ready&&price>0&&budget>0){
       var e2=budget/price, t2=e2/rate;
       $('m-out').textContent=fmtHM(t2);
-      $('m-sub').textContent='≈ '+e2.toFixed(1)+' kWh · '+money(budget)+' at '+money(price)+'/kWh';
+      $('m-sub').textContent = '≈ '+e2.toFixed(1)+' kWh · '+money(budget)+' at '+money(price)+'/kWh';
+      if(useInc){
+        var needCost = needEnergy * price;
+        if(curPct>=100){
+          setFieldsState(mFields, 'over');
+          setAnnot(mHint, mAnnot, annotHTML('Battery full', 'All '+money(budget)+' over', 'over'), 'over');
+        } else if(budget > needCost){
+          var exC2 = budget - needCost;
+          setFieldsState(mFields, 'over');
+          setAnnot(mHint, mAnnot,
+            annotHTML('Stop at '+money(needCost), '+'+money(exC2)+' over', 'over'),
+            'over');
+        } else {
+          var reachedPct2 = curPct + (e2/battery)*100;
+          setFieldsState(mFields, 'under');
+          setAnnot(mHint, mAnnot,
+            annotHTML('Fills to 100% at '+money(needCost), 'Reaches '+reachedPct2.toFixed(0)+'%', 'under'),
+            'under');
+        }
+      }
       $('res-money').classList.remove('idle');
     } else {
       $('m-out').textContent='—';
@@ -1218,6 +1374,14 @@
   ['t-hours','t-mins','m-amount','t-pct'].forEach(function(id){
     $(id).addEventListener('input', render);
   });
+  (function(){
+    var b=$('inc-cur'); if(!b) return;
+    b.addEventListener('click', function(){
+      tap(8);
+      setIncludeCurrent(!includeCurrent);
+    });
+  })();
+  syncIncPills();
 
   /* ---- vehicle list in dropdown ---- */
   function renderVList(){
